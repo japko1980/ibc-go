@@ -22,10 +22,10 @@ import (
 	"github.com/cosmos/ibc-go/e2e/testsuite"
 	"github.com/cosmos/ibc-go/e2e/testsuite/query"
 	"github.com/cosmos/ibc-go/e2e/testvalues"
-	controllertypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/types"
-	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
-	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
-	ibctesting "github.com/cosmos/ibc-go/v8/testing"
+	controllertypes "github.com/cosmos/ibc-go/v9/modules/apps/27-interchain-accounts/controller/types"
+	icatypes "github.com/cosmos/ibc-go/v9/modules/apps/27-interchain-accounts/types"
+	channeltypes "github.com/cosmos/ibc-go/v9/modules/core/04-channel/types"
+	ibctesting "github.com/cosmos/ibc-go/v9/testing"
 )
 
 const (
@@ -86,7 +86,9 @@ func (s *InterchainAccountsGroupsTestSuite) TestInterchainAccountsGroupsIntegrat
 		err               error
 	)
 
-	relayer := s.GetRelayer()
+	testName := t.Name()
+	relayer := s.CreateDefaultPaths(testName)
+
 	chainA, chainB := s.GetChains()
 
 	chainAWallet := s.CreateUserOnChainA(ctx, testvalues.StartingTokenAmount)
@@ -135,7 +137,7 @@ func (s *InterchainAccountsGroupsTestSuite) TestInterchainAccountsGroupsIntegrat
 	})
 
 	t.Run("start relayer", func(t *testing.T) {
-		s.StartRelayer(relayer)
+		s.StartRelayer(relayer, testName)
 	})
 
 	t.Run("verify interchain account registration success", func(t *testing.T) {

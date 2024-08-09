@@ -3,10 +3,10 @@ package fee_test
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/cosmos/ibc-go/v8/modules/apps/29-fee/types"
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
-	ibctesting "github.com/cosmos/ibc-go/v8/testing"
+	"github.com/cosmos/ibc-go/v9/modules/apps/29-fee/types"
+	transfertypes "github.com/cosmos/ibc-go/v9/modules/apps/transfer/types"
+	clienttypes "github.com/cosmos/ibc-go/v9/modules/core/02-client/types"
+	ibctesting "github.com/cosmos/ibc-go/v9/testing"
 )
 
 // Integration test to ensure ics29 works with ics20
@@ -46,7 +46,7 @@ func (suite *FeeTestSuite) TestFeeTransfer() {
 
 			msgs := []sdk.Msg{
 				types.NewMsgPayPacketFee(fee, path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, suite.chainA.SenderAccount.GetAddress().String(), nil),
-				transfertypes.NewMsgTransfer(path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, tc.coinsToTransfer, suite.chainA.SenderAccount.GetAddress().String(), suite.chainB.SenderAccount.GetAddress().String(), clienttypes.NewHeight(1, 100), 0, ""),
+				transfertypes.NewMsgTransfer(path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, tc.coinsToTransfer, suite.chainA.SenderAccount.GetAddress().String(), suite.chainB.SenderAccount.GetAddress().String(), clienttypes.NewHeight(1, 100), 0, "", nil),
 			}
 
 			res, err := suite.chainA.SendMsgs(msgs...)
@@ -59,11 +59,10 @@ func (suite *FeeTestSuite) TestFeeTransfer() {
 			suite.Require().NoError(err)
 
 			// register counterparty address on chainB
-			// relayerAddress is address of sender account on chainB, but we will use it on chainA
-			// to differentiate from the chainA.SenderAccount for checking successful relay payouts
-			relayerAddress := suite.chainB.SenderAccount.GetAddress()
+			payeeAddr, err := sdk.AccAddressFromBech32(ibctesting.TestAccAddress)
+			suite.Require().NoError(err)
 
-			msgRegister := types.NewMsgRegisterCounterpartyPayee(path.EndpointB.ChannelConfig.PortID, path.EndpointB.ChannelID, suite.chainB.SenderAccount.GetAddress().String(), relayerAddress.String())
+			msgRegister := types.NewMsgRegisterCounterpartyPayee(path.EndpointB.ChannelConfig.PortID, path.EndpointB.ChannelID, suite.chainB.SenderAccount.GetAddress().String(), payeeAddr.String())
 			_, err = suite.chainB.SendMsgs(msgRegister)
 			suite.Require().NoError(err) // message committed
 
@@ -78,7 +77,7 @@ func (suite *FeeTestSuite) TestFeeTransfer() {
 			// check forward relay balance
 			suite.Require().Equal(
 				fee.RecvFee,
-				sdk.NewCoins(suite.chainA.GetSimApp().BankKeeper.GetBalance(suite.chainA.GetContext(), suite.chainB.SenderAccount.GetAddress(), ibctesting.TestCoin.Denom)),
+				sdk.NewCoins(suite.chainA.GetSimApp().BankKeeper.GetBalance(suite.chainA.GetContext(), payeeAddr, ibctesting.TestCoin.Denom)),
 			)
 
 			suite.Require().Equal(
@@ -157,7 +156,7 @@ func (suite *FeeTestSuite) TestTransferFeeUpgrade() {
 				fee := types.NewFee(defaultRecvFee, defaultAckFee, defaultTimeoutFee)
 				msgs := []sdk.Msg{
 					types.NewMsgPayPacketFee(fee, path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, suite.chainA.SenderAccount.GetAddress().String(), nil),
-					transfertypes.NewMsgTransfer(path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, sdk.NewCoins(ibctesting.TestCoin), suite.chainA.SenderAccount.GetAddress().String(), suite.chainB.SenderAccount.GetAddress().String(), clienttypes.NewHeight(1, 100), 0, ""),
+					transfertypes.NewMsgTransfer(path.EndpointA.ChannelConfig.PortID, path.EndpointA.ChannelID, sdk.NewCoins(ibctesting.TestCoin), suite.chainA.SenderAccount.GetAddress().String(), suite.chainB.SenderAccount.GetAddress().String(), clienttypes.NewHeight(1, 100), 0, "", nil),
 				}
 
 				res, err := suite.chainA.SendMsgs(msgs...)

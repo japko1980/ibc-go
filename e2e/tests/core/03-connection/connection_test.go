@@ -20,9 +20,9 @@ import (
 	"github.com/cosmos/ibc-go/e2e/testsuite"
 	"github.com/cosmos/ibc-go/e2e/testsuite/query"
 	"github.com/cosmos/ibc-go/e2e/testvalues"
-	connectiontypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
-	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
-	ibctesting "github.com/cosmos/ibc-go/v8/testing"
+	connectiontypes "github.com/cosmos/ibc-go/v9/modules/core/03-connection/types"
+	ibcexported "github.com/cosmos/ibc-go/v9/modules/core/exported"
+	ibctesting "github.com/cosmos/ibc-go/v9/testing"
 )
 
 func TestConnectionTestSuite(t *testing.T) {
@@ -33,8 +33,8 @@ type ConnectionTestSuite struct {
 	testsuite.E2ETestSuite
 }
 
-func (s *ConnectionTestSuite) SetupTest() {
-	s.SetupPath(ibc.DefaultClientOpts(), s.TransferChannelOptions())
+func (s *ConnectionTestSuite) CreateConnectionTestPath(testName string) (ibc.Relayer, ibc.ChannelOutput) {
+	return s.CreatePaths(ibc.DefaultClientOpts(), s.TransferChannelOptions(), testName), s.GetChainAChannelForTest(testName)
 }
 
 // QueryMaxExpectedTimePerBlockParam queries the on-chain max expected time per block param for 03-connection
@@ -64,8 +64,8 @@ func (s *ConnectionTestSuite) QueryMaxExpectedTimePerBlockParam(ctx context.Cont
 func (s *ConnectionTestSuite) TestMaxExpectedTimePerBlockParam() {
 	t := s.T()
 	ctx := context.TODO()
-
-	relayer, channelA := s.GetRelayer(), s.GetChainAChannel()
+	testName := t.Name()
+	relayer, channelA := s.CreateConnectionTestPath(testName)
 
 	chainA, chainB := s.GetChains()
 	chainAVersion := chainA.Config().Images[0].Version
@@ -113,7 +113,7 @@ func (s *ConnectionTestSuite) TestMaxExpectedTimePerBlockParam() {
 
 	t.Run("ensure packets can be received, send from chainB to chainA", func(t *testing.T) {
 		t.Run("send tokens from chainB to chainA", func(t *testing.T) {
-			transferTxResp := s.Transfer(ctx, chainB, chainBWallet, channelA.Counterparty.PortID, channelA.Counterparty.ChannelID, testvalues.DefaultTransferCoins(chainBDenom), chainBAddress, chainAAddress, s.GetTimeoutHeight(ctx, chainA), 0, "")
+			transferTxResp := s.Transfer(ctx, chainB, chainBWallet, channelA.Counterparty.PortID, channelA.Counterparty.ChannelID, testvalues.DefaultTransferCoins(chainBDenom), chainBAddress, chainAAddress, s.GetTimeoutHeight(ctx, chainA), 0, "", nil)
 			s.AssertTxSuccess(transferTxResp)
 		})
 
@@ -126,7 +126,7 @@ func (s *ConnectionTestSuite) TestMaxExpectedTimePerBlockParam() {
 		})
 
 		t.Run("start relayer", func(t *testing.T) {
-			s.StartRelayer(relayer)
+			s.StartRelayer(relayer, testName)
 		})
 
 		t.Run("packets are relayed", func(t *testing.T) {

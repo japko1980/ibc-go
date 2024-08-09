@@ -21,11 +21,11 @@ import (
 	"github.com/cosmos/ibc-go/e2e/testsuite"
 	"github.com/cosmos/ibc-go/e2e/testsuite/query"
 	"github.com/cosmos/ibc-go/e2e/testvalues"
-	controllertypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/types"
-	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
-	feetypes "github.com/cosmos/ibc-go/v8/modules/apps/29-fee/types"
-	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
-	ibctesting "github.com/cosmos/ibc-go/v8/testing"
+	controllertypes "github.com/cosmos/ibc-go/v9/modules/apps/27-interchain-accounts/controller/types"
+	icatypes "github.com/cosmos/ibc-go/v9/modules/apps/27-interchain-accounts/types"
+	feetypes "github.com/cosmos/ibc-go/v9/modules/apps/29-fee/types"
+	channeltypes "github.com/cosmos/ibc-go/v9/modules/core/04-channel/types"
+	ibctesting "github.com/cosmos/ibc-go/v9/testing"
 )
 
 func TestIncentivizedInterchainAccountsTestSuite(t *testing.T) {
@@ -40,7 +40,9 @@ func (s *IncentivizedInterchainAccountsTestSuite) TestMsgSendTx_SuccessfulBankSe
 	t := s.T()
 	ctx := context.TODO()
 
-	relayer := s.GetRelayer()
+	testName := t.Name()
+	relayer := s.CreateDefaultPaths(testName)
+
 	chainA, chainB := s.GetChains()
 
 	var (
@@ -49,19 +51,14 @@ func (s *IncentivizedInterchainAccountsTestSuite) TestMsgSendTx_SuccessfulBankSe
 		testFee       = testvalues.DefaultFee(chainADenom)
 	)
 
+	chainARelayerWallet, chainBRelayerWallet, err := s.RecoverRelayerWallets(ctx, relayer, testName)
 	t.Run("relayer wallets recovered", func(t *testing.T) {
-		err := s.RecoverRelayerWallets(ctx, relayer)
-		s.Require().NoError(err)
-	})
-
-	chainARelayerWallet, chainBRelayerWallet, err := s.GetRelayerWallets(relayer)
-	t.Run("relayer wallets fetched", func(t *testing.T) {
 		s.Require().NoError(err)
 	})
 
 	s.Require().NoError(test.WaitForBlocks(ctx, 5, chainA, chainB), "failed to wait for blocks")
 
-	chainARelayerUser, chainBRelayerUser := s.GetRelayerUsers(ctx)
+	chainARelayerUser, chainBRelayerUser := s.GetRelayerUsers(ctx, testName)
 	relayerAStartingBalance, err := s.GetChainANativeBalance(ctx, chainARelayerUser)
 	s.Require().NoError(err)
 	t.Logf("relayer A user starting with balance: %d", relayerAStartingBalance)
@@ -78,7 +75,7 @@ func (s *IncentivizedInterchainAccountsTestSuite) TestMsgSendTx_SuccessfulBankSe
 	})
 
 	t.Run("start relayer", func(t *testing.T) {
-		s.StartRelayer(relayer)
+		s.StartRelayer(relayer, testName)
 	})
 
 	var channelOutput ibc.ChannelOutput
@@ -174,7 +171,7 @@ func (s *IncentivizedInterchainAccountsTestSuite) TestMsgSendTx_SuccessfulBankSe
 		})
 
 		t.Run("start relayer", func(t *testing.T) {
-			s.StartRelayer(relayer)
+			s.StartRelayer(relayer, testName)
 		})
 
 		t.Run("packets are relayed", func(t *testing.T) {
@@ -216,7 +213,9 @@ func (s *IncentivizedInterchainAccountsTestSuite) TestMsgSendTx_FailedBankSend_I
 	t := s.T()
 	ctx := context.TODO()
 
-	relayer := s.GetRelayer()
+	testName := t.Name()
+	relayer := s.CreateDefaultPaths(testName)
+
 	chainA, chainB := s.GetChains()
 
 	var (
@@ -225,19 +224,14 @@ func (s *IncentivizedInterchainAccountsTestSuite) TestMsgSendTx_FailedBankSend_I
 		testFee       = testvalues.DefaultFee(chainADenom)
 	)
 
+	chainARelayerWallet, chainBRelayerWallet, err := s.RecoverRelayerWallets(ctx, relayer, testName)
 	t.Run("relayer wallets recovered", func(t *testing.T) {
-		err := s.RecoverRelayerWallets(ctx, relayer)
-		s.Require().NoError(err)
-	})
-
-	chainARelayerWallet, chainBRelayerWallet, err := s.GetRelayerWallets(relayer)
-	t.Run("relayer wallets fetched", func(t *testing.T) {
 		s.Require().NoError(err)
 	})
 
 	s.Require().NoError(test.WaitForBlocks(ctx, 5, chainA, chainB), "failed to wait for blocks")
 
-	chainARelayerUser, chainBRelayerUser := s.GetRelayerUsers(ctx)
+	chainARelayerUser, chainBRelayerUser := s.GetRelayerUsers(ctx, testName)
 	relayerAStartingBalance, err := s.GetChainANativeBalance(ctx, chainARelayerUser)
 	s.Require().NoError(err)
 	t.Logf("relayer A user starting with balance: %d", relayerAStartingBalance)
@@ -254,7 +248,7 @@ func (s *IncentivizedInterchainAccountsTestSuite) TestMsgSendTx_FailedBankSend_I
 	})
 
 	t.Run("start relayer", func(t *testing.T) {
-		s.StartRelayer(relayer)
+		s.StartRelayer(relayer, testName)
 	})
 
 	var channelOutput ibc.ChannelOutput
@@ -341,7 +335,7 @@ func (s *IncentivizedInterchainAccountsTestSuite) TestMsgSendTx_FailedBankSend_I
 		})
 
 		t.Run("start relayer", func(t *testing.T) {
-			s.StartRelayer(relayer)
+			s.StartRelayer(relayer, testName)
 		})
 
 		t.Run("packets are relayed", func(t *testing.T) {

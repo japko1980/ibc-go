@@ -23,12 +23,12 @@ import (
 	"github.com/cosmos/ibc-go/e2e/testsuite"
 	"github.com/cosmos/ibc-go/e2e/testsuite/query"
 	"github.com/cosmos/ibc-go/e2e/testvalues"
-	controllertypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/types"
-	hosttypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host/types"
-	icatypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/types"
-	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
-	coretypes "github.com/cosmos/ibc-go/v8/modules/core/types"
-	ibctesting "github.com/cosmos/ibc-go/v8/testing"
+	controllertypes "github.com/cosmos/ibc-go/v9/modules/apps/27-interchain-accounts/controller/types"
+	hosttypes "github.com/cosmos/ibc-go/v9/modules/apps/27-interchain-accounts/host/types"
+	icatypes "github.com/cosmos/ibc-go/v9/modules/apps/27-interchain-accounts/types"
+	channeltypes "github.com/cosmos/ibc-go/v9/modules/core/04-channel/types"
+	coretypes "github.com/cosmos/ibc-go/v9/modules/core/types"
+	ibctesting "github.com/cosmos/ibc-go/v9/testing"
 )
 
 func TestInterchainAccountsParamsTestSuite(t *testing.T) {
@@ -59,6 +59,9 @@ func (s *InterchainAccountsParamsTestSuite) QueryHostParams(ctx context.Context,
 func (s *InterchainAccountsParamsTestSuite) TestControllerEnabledParam() {
 	t := s.T()
 	ctx := context.TODO()
+
+	testName := t.Name()
+	s.CreateDefaultPaths(testName)
 
 	chainA, _ := s.GetChains()
 	chainAVersion := chainA.Config().Images[0].Version
@@ -112,7 +115,9 @@ func (s *InterchainAccountsParamsTestSuite) TestHostEnabledParam() {
 	t := s.T()
 	ctx := context.TODO()
 
-	relayer := s.GetRelayer()
+	testName := t.Name()
+	relayer := s.CreateDefaultPaths(testName)
+
 	chainA, chainB := s.GetChains()
 	chainBVersion := chainB.Config().Images[0].Version
 
@@ -142,7 +147,7 @@ func (s *InterchainAccountsParamsTestSuite) TestHostEnabledParam() {
 		})
 
 		t.Run("start relayer", func(t *testing.T) {
-			s.StartRelayer(relayer)
+			s.StartRelayer(relayer, testName)
 		})
 
 		t.Run("verify interchain account", func(t *testing.T) {
@@ -229,7 +234,7 @@ func (s *InterchainAccountsParamsTestSuite) TestHostEnabledParam() {
 		})
 
 		t.Run("start relayer", func(t *testing.T) {
-			s.StartRelayer(relayer)
+			s.StartRelayer(relayer, testName)
 		})
 
 		s.Require().NoError(test.WaitForBlocks(ctx, 10, chainA, chainB))
