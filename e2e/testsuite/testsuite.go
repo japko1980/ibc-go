@@ -102,12 +102,6 @@ func (s *E2ETestSuite) initDockerClient() {
 	s.network = network
 }
 
-// SetupSuite will by default create chains with no additional options. If additional options are required,
-// the test suite must define the SetupSuite function and provide the required options.
-func (s *E2ETestSuite) SetupSuite() {
-	s.SetupChains(context.TODO(), nil)
-}
-
 // configureGenesisDebugExport sets, if needed, env variables to enable exporting of Genesis debug files.
 func (s *E2ETestSuite) configureGenesisDebugExport() {
 	tc := LoadConfig()
@@ -161,8 +155,8 @@ func (s *E2ETestSuite) initializeRelayerPool(n int) []ibc.Relayer {
 
 // SetupChains creates the chains for the test suite, and also a relayer that is wired up to establish
 // connections and channels between the chains.
-func (s *E2ETestSuite) SetupChains(ctx context.Context, channelOptionsModifier ChainOptionModifier, chainSpecOpts ...ChainOptionConfiguration) {
-	s.T().Logf("Setting up chains: %s", s.T().Name())
+func (s *E2ETestSuite) SetupChains(ctx context.Context, chainCount int, channelOptionsModifier ChainOptionModifier, chainSpecOpts ...ChainOptionConfiguration) {
+	s.T().Logf("Setting up %d chains: %s", chainCount, s.T().Name())
 
 	if LoadConfig().DebugConfig.KeepContainers {
 		s.Require().NoError(os.Setenv(KeepContainersEnv, "true"))
@@ -171,12 +165,17 @@ func (s *E2ETestSuite) SetupChains(ctx context.Context, channelOptionsModifier C
 	s.initState()
 	s.configureGenesisDebugExport()
 
-	chainOptions := DefaultChainOptions()
+	chainOptions, err := DefaultChainOptions(chainCount)
+	s.Require().NoError(err)
+
 	for _, opt := range chainSpecOpts {
 		opt(&chainOptions)
 	}
 
-	s.chains = s.createChains(chainOptions)
+	specCount := len(chainOptions.ChainSpecs)
+	s.Require().GreaterOrEqualf(specCount, chainCount, "wants to create %d chains, but DefaultChainOptions has %d configurations", chainCount, specCount)
+
+	s.chains = s.createChains(chainCount, chainOptions)
 
 	s.relayerPool = s.initializeRelayerPool(chainOptions.RelayerCount)
 
@@ -301,11 +300,21 @@ func getLatestChannel(channels []ibc.ChannelOutput) ibc.ChannelOutput {
 	})
 }
 
-// GetChainAChannelForTest returns the ibc.ChannelOutput for the current test.
+// GetChainAToChainBChannel returns the ibc.ChannelOutput for the current test.
 // this defaults to the first entry in the list, and will be what is needed in the case of
 // a single channel test.
-func (s *E2ETestSuite) GetChainAChannelForTest(testName string) ibc.ChannelOutput {
+func (s *E2ETestSuite) GetChainAToChainBChannel(testName string) ibc.ChannelOutput {
 	return s.GetChannelsForTest(s.GetAllChains()[0], testName)[0]
+}
+
+// GetChainBToChainCChannel returns the ibc.ChannelOutput for the current test.
+func (s *E2ETestSuite) GetChainBToChainCChannel(testName string) ibc.ChannelOutput {
+	return s.GetChannelsForTest(s.GetAllChains()[1], testName)[1]
+}
+
+// GetChainCToChainDChannel returns the ibc.ChannelOutput for the current test.
+func (s *E2ETestSuite) GetChainCToChainDChannel(testName string) ibc.ChannelOutput {
+	return s.GetChannelsForTest(s.GetAllChains()[2], testName)[1]
 }
 
 // GetChannelsForTest returns all channels for the specified test.
@@ -554,6 +563,11 @@ func (s *E2ETestSuite) CreateUserOnChainC(ctx context.Context, amount int64) ibc
 	return s.createWalletOnChainIndex(ctx, amount, 2)
 }
 
+// CreateUserOnChainD creates a user with the given amount of funds on chain C.
+func (s *E2ETestSuite) CreateUserOnChainD(ctx context.Context, amount int64) ibc.Wallet {
+	return s.createWalletOnChainIndex(ctx, amount, 3)
+}
+
 // createWalletOnChainIndex creates a wallet with the given amount of funds on the chain of the given index.
 func (s *E2ETestSuite) createWalletOnChainIndex(ctx context.Context, amount, chainIndex int64) ibc.Wallet {
 	chain := s.GetAllChains()[chainIndex]
@@ -577,15 +591,11 @@ func (s *E2ETestSuite) GetChainBNativeBalance(ctx context.Context, user ibc.Wall
 
 // GetChainBalanceForDenom returns the balance for a given denom given a chain.
 func GetChainBalanceForDenom(ctx context.Context, chain ibc.Chain, denom string, user ibc.Wallet) (int64, error) {
-	balanceResp, err := query.GRPCQuery[banktypes.QueryBalanceResponse](ctx, chain, &banktypes.QueryBalanceRequest{
-		Address: user.FormattedAddress(),
-		Denom:   denom,
-	})
+	resp, err := query.Balance(ctx, chain, user.FormattedAddress(), denom)
 	if err != nil {
 		return 0, err
 	}
-
-	return balanceResp.Balance.Amount.Int64(), nil
+	return resp.Int64(), nil
 }
 
 // AssertPacketRelayed asserts that the packet commitment does not exist on the sending chain.
@@ -630,9 +640,11 @@ func (s *E2ETestSuite) AssertHumanReadableDenom(ctx context.Context, chain ibc.C
 
 // createChains creates two separate chains in docker containers.
 // test and can be retrieved with GetChains.
-func (s *E2ETestSuite) createChains(chainOptions ChainOptions) []ibc.Chain {
+func (s *E2ETestSuite) createChains(chainCount int, chainOptions ChainOptions) []ibc.Chain {
 	t := s.T()
-	cf := interchaintest.NewBuiltinChainFactory(s.logger, chainOptions.ChainSpecs)
+	s.Require().GreaterOrEqualf(len(chainOptions.ChainSpecs), chainCount, "len(chainOptions.ChainSpecs): %d < chainCount: %d", len(chainOptions.ChainSpecs), chainCount)
+
+	cf := interchaintest.NewBuiltinChainFactory(s.logger, chainOptions.ChainSpecs[:chainCount]) // Take the first N specs
 
 	// this is intentionally called after the interchaintest.DockerSetup function. The above function registers a
 	// cleanup task which deletes all containers. By registering a cleanup function afterwards, it is executed first

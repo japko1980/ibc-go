@@ -30,6 +30,11 @@ type TransferTestSuite struct {
 	transferTester
 }
 
+// SetupSuite sets up chains for the current test suite
+func (s *TransferTestSuite) SetupSuite() {
+	s.SetupChains(context.TODO(), 2, nil)
+}
+
 // transferTester defines some helper functions that can be used in various test suites
 // that test transfer functionality.
 type transferTester struct {
@@ -46,7 +51,7 @@ func (s *transferTester) QueryTransferParams(ctx context.Context, chain ibc.Chai
 // CreateTransferPath sets up a path between chainA and chainB with a transfer channel and returns the relayer wired
 // up to watch the channel and port IDs created.
 func (s *transferTester) CreateTransferPath(testName string) (ibc.Relayer, ibc.ChannelOutput) {
-	relayer, channel := s.CreatePaths(ibc.DefaultClientOpts(), s.TransferChannelOptions(), testName), s.GetChainAChannelForTest(testName)
+	relayer, channel := s.CreatePaths(ibc.DefaultClientOpts(), s.TransferChannelOptions(), testName), s.GetChainAToChainBChannel(testName)
 	s.T().Logf("test %s running on portID %s channelID %s", testName, channel.PortID, channel.ChannelID)
 	return relayer, channel
 }

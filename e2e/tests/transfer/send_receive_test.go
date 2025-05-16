@@ -29,7 +29,7 @@ type TransferTestSuiteSendReceive struct {
 }
 
 func (s *TransferTestSuiteSendReceive) SetupSuite() {
-	s.SetupChains(context.TODO(), nil, func(options *testsuite.ChainOptions) {
+	s.SetupChains(context.TODO(), 2, nil, func(options *testsuite.ChainOptions) {
 		options.RelayerCount = 1
 	})
 }
@@ -46,7 +46,7 @@ func (s *TransferTestSuiteSendReceive) TestReceiveEnabledParam() {
 	chainA, chainB := s.GetChains()
 
 	relayer := s.GetRelayerForTest(testName)
-	channelA := s.GetChainAChannelForTest(testName)
+	channelA := s.GetChainAToChainBChannel(testName)
 
 	chainAVersion := chainA.Config().Images[0].Version
 
