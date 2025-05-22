@@ -39,6 +39,11 @@ type LocalhostInterchainAccountsTestSuite struct {
 	testsuite.E2ETestSuite
 }
 
+// SetupSuite sets up chains for the current test suite
+func (s *LocalhostInterchainAccountsTestSuite) SetupSuite() {
+	s.SetupChains(context.TODO(), 1, nil)
+}
+
 // compatibility:TestInterchainAccounts_Localhost:from_versions: v7.10.0,v8.7.0,v10.0.0
 func (s *LocalhostInterchainAccountsTestSuite) TestInterchainAccounts_Localhost() {
 	t := s.T()
@@ -47,7 +52,8 @@ func (s *LocalhostInterchainAccountsTestSuite) TestInterchainAccounts_Localhost(
 	testName := t.Name()
 	s.CreateDefaultPaths(testName)
 
-	chainA, _ := s.GetChains()
+	chains := s.GetAllChains()
+	chainA := chains[0]
 
 	chainADenom := chainA.Config().Denom
 
@@ -164,7 +170,7 @@ func (s *LocalhostInterchainAccountsTestSuite) TestInterchainAccounts_Localhost(
 		txResp := s.BroadcastMessages(ctx, chainA, userAWallet, msgSendTx)
 		s.AssertTxSuccess(txResp)
 
-		packet, err = ibctesting.ParsePacketFromEvents(txResp.Events)
+		packet, err = ibctesting.ParseV1PacketFromEvents(txResp.Events)
 		s.Require().NoError(err)
 		s.Require().NotNil(packet)
 	})
@@ -203,7 +209,8 @@ func (s *LocalhostInterchainAccountsTestSuite) TestInterchainAccounts_ReopenChan
 	testName := t.Name()
 	s.CreateDefaultPaths(testName)
 
-	chainA, _ := s.GetChains()
+	chains := s.GetAllChains()
+	chainA := chains[0]
 
 	chainADenom := chainA.Config().Denom
 
@@ -320,7 +327,7 @@ func (s *LocalhostInterchainAccountsTestSuite) TestInterchainAccounts_ReopenChan
 		txResp := s.BroadcastMessages(ctx, chainA, userAWallet, msgSendTx)
 		s.AssertTxSuccess(txResp)
 
-		packet, err = ibctesting.ParsePacketFromEvents(txResp.Events)
+		packet, err = ibctesting.ParseV1PacketFromEvents(txResp.Events)
 		s.Require().NoError(err)
 		s.Require().NotNil(packet)
 	})
@@ -448,7 +455,7 @@ func (s *LocalhostInterchainAccountsTestSuite) TestInterchainAccounts_ReopenChan
 		txResp := s.BroadcastMessages(ctx, chainA, userAWallet, msgSendTx)
 		s.AssertTxSuccess(txResp)
 
-		packet, err = ibctesting.ParsePacketFromEvents(txResp.Events)
+		packet, err = ibctesting.ParseV1PacketFromEvents(txResp.Events)
 		s.Require().NoError(err)
 		s.Require().NotNil(packet)
 	})

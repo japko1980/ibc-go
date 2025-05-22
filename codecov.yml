@@ -1,0 +1,24 @@
+coverage:
+  precision: 2
+  range:
+  - 70.0
+  - 100.0
+  round: down
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 0%
+        base: auto
+comment:
+  require_changes: "coverage_drop OR uncovered_patch" # Only comment when coverage drops or there is uncovered code in the commit
+ignore:
+- "**/*.pb.go"
+- "**/*.pb.gw.go"
+- "docs"
+- "simapp"
+- "testing"
+- "modules/light-clients/08-wasm/testing"
+- "scripts"
+- "contrib"
+- "cmd"
